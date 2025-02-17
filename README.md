@@ -1,16 +1,16 @@
 ## 项目简介
 
-`bumoyu-nest` 是基于 NestJs + Typeorm + MySql 等主流技术栈构建的后台工程。整个项目包括工作台（`bumoyu-workbench`）、后端（当前工程）和谷歌插件（`bumoyu-chrome-extension`）三个工程组成。
+**不摸鱼**（[演示地址](https://bumoyu.cn)、[文档指南](https://bumoyu.cn/docs/)） 是一款个性化定制的导航网站，旨在帮助用户更高效地管理和访问常用网站和资源。目前主要提供聚合搜索和分类导航功能，未来还将添加更多实用工具，如备忘录、常用代码片段等。
 
-## 项目地址
+目前，项目涉及的工程都已开源，欢迎大家 fork、star、issue、pr。
 
-- `bumoyu-workbench`: [Github 地址](https://github.com/partiny/bumoyu-workbench) | [Gitee 地址](https://gitee.com/partiny/bumoyu-workbench)
-- `bumoyu-nest`: [Github 地址](https://github.com/partiny/bumoyu-nest) | [Gitee 地址](https://gitee.com/partiny/bumoyu-nest)
-- `bumoyu-chrome-extension`: [Github 地址](https://github.com/partiny/bumoyu-chrome-extension) | [Gitee 地址](https://gitee.com/partiny/bumoyu-chrome-extension)
+## 工程介绍
 
-## 项目计划
+### bumoyu-nest
 
-目前项目基本框架已经搭建完毕，迭代功能正在路上...
+[Gitee 地址](https://gitee.com/partiny/bumoyu-nest) | [Github 地址](https://github.com/partiny/bumoyu-nest)
+
+`bumoyu-nest` 是基于 NestJS + TypeORM + MySQL 等主流技术栈构建的后台工程。包含用户、角色和导航等核心功能，并集成了邮件发送（Mailer）、缓存（Redis）和 Excel 文件处理（xlsx）等功能。这个项目是整个产品的后端基础，确保了数据的安全性和高效处理。
 
 ## 版本依赖
 
@@ -29,10 +29,10 @@
 
 ```bash
 # 克隆代码
+# Gitee 地址
+git clone https://gitee.com/partiny/bumoyu-nest.git
 # Github 地址
 git clone https://github.com/partiny/bumoyu-nest.git
-# Gitee 地址
-# git clone https://gitee.com/partiny/bumoyu-nest.git
 
 # 切换目录
 cd bumoyu-nest
@@ -49,4 +49,4 @@ pnpm start
 
 ## 支持一下
 
-如果觉得框架不错，或者对你有用，可以去 [Github 地址](https://github.com/partiny/bumoyu-nest) | [Gitee 地址](https://gitee.com/partiny/bumoyu-nest) 帮我点个 ⭐ Star，谢谢~~
+如果觉得框架不错，或者对你有用，可以去帮我点个 ⭐ Star，谢谢~~

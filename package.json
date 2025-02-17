@@ -1,10 +1,9 @@
 {
   "name": "bumoyu-nest",
-  "version": "0.0.1",
-  "description": "",
-  "author": "",
-  "private": true,
-  "license": "UNLICENSED",
+  "version": "1.0.0",
+  "description": "不摸鱼的后端工程",
+  "license": "MIT",
+  "author": "Partiny <partiny@163.com>",
   "scripts": {
     "build:ts": "tsc",
     "copy:templates": "npx ts-node script/copy-mail-templates.ts",
