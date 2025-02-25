@@ -110,3 +110,27 @@ export class UpdateOrderOfLinksDto {
   @IsString({ each: true })
   linkIds: string[];
 }
+
+/**修改链接分类排序（可跨分类） */
+export class UpdateOrderOfLinksCrossCategoryDto {
+  @IsNotEmpty({ message: '原始分类ID不能为空' })
+  @ApiProperty({ description: '原分类ID', example: 'cat-123' })
+  fromCategoryId: string;
+
+  @IsNotEmpty({ message: '新分类ID不能为空' })
+  @ApiProperty({ description: '目标分类ID', example: 'cat-456' })
+  toCategoryId: string;
+
+  @IsNotEmpty({ message: '修改的链接ID不能为空' })
+  @ApiProperty({ description: '被移动的链接ID', example: 'link-789' })
+  linkId: string;
+
+  @IsArray({ message: 'linkIds类型不对' })
+  @ArrayMinSize(1, { message: 'linkIds不能为空数组' })
+  @IsString({ each: true })
+  @ApiProperty({
+    description: '目标分类的新链接顺序ID数组（包含被移动的链接）',
+    example: ['link-001', 'link-789', 'link-002']
+  })
+  toLinkIds: string[];
+}

@@ -26,5 +26,5 @@ export class Base {
     nullable: true,
     comment: '最后一次更新记录的用户id'
   })
-  updatedBy: number
+  updatedBy: string
 }

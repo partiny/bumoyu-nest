@@ -4,12 +4,16 @@ import { APP_GUARD } from "@nestjs/core";
 import { JwtModule } from "@nestjs/jwt";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { AuthGuard } from "../core/guards";
+import * as path from 'path';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: process.env.NODE_ENV === 'production' ? '.env.prod' : '.env.local'
+      envFilePath: path.resolve(
+        process.cwd(),
+        `.env.${process.env.NODE_ENV || 'dev'}`
+      )
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],

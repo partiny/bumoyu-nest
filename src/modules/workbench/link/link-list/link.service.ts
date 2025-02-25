@@ -2,7 +2,7 @@ import { ForbiddenException, forwardRef, Inject, Injectable, InternalServerError
 import { InjectEntityManager, InjectRepository } from "@nestjs/typeorm";
 import { EntityManager, In, Like, Repository } from "typeorm";
 import { Link } from "./link.entity";
-import { AddLinkDto, BatchAddLinksFromItabDto, DeleteLinkDto, GetLinkListDto, UpdateLinkDto, UpdateOrderOfLinksDto } from "./link.dto";
+import { AddLinkDto, BatchAddLinksFromItabDto, DeleteLinkDto, GetLinkListDto, UpdateLinkDto, UpdateOrderOfLinksCrossCategoryDto, UpdateOrderOfLinksDto } from "./link.dto";
 import { LinkCategory } from "../link-category/link-category.entity";
 import { PayloadUser } from "@src/core/decorators";
 import { ApiResult } from "@src/core/filters";
@@ -330,4 +330,103 @@ export class LinkService {
       throw new InternalServerErrorException(error)
     }
   }
+
+  /**修改链接分类排序（可跨分类） */
+  async updateOrderOfLinksCrossCategory(payload: PayloadUser, dto: UpdateOrderOfLinksCrossCategoryDto) {
+    const { fromCategoryId, toCategoryId, linkId, toLinkIds } = dto
+
+    if (fromCategoryId === toCategoryId) {
+      return this.updateOrderOfLinks(payload, {
+        categoryId: fromCategoryId,
+        linkIds: toLinkIds
+      })
+    }
+
+    const user = await this.userRepository.findOneBy({ id: payload.userId, isDelete: 0 })
+    if (!user) {
+      throw new InternalServerErrorException('当前用户不存在')
+    }
+
+    // 验证原分类和目标分类权限
+    const [fromCategory, toCategory] = await Promise.all([
+      this.linkCategoryRepository.findOneBy({ id: fromCategoryId, userId: user.id }),
+      this.linkCategoryRepository.findOneBy({ id: toCategoryId, userId: user.id })
+    ]);
+
+    if (!fromCategory || !toCategory) {
+      throw new ForbiddenException('无权限操作该分类');
+    }
+
+    // 获取要移动的链接（确保存在于原分类）
+    const movingLink = await this.linkRepository.findOne({
+      where: { id: linkId, categoryId: fromCategoryId }
+    });
+
+    if (!movingLink) {
+      throw new NotFoundException('链接不存在或不属于原分类');
+    }
+
+    // 排除当前移动的链接ID，验证其他链接是否属于目标分类
+    const targetLinkIdsToVerify = toLinkIds.filter(id => id !== linkId);
+    const targetLinks = await this.linkRepository.find({
+      where: { 
+        id: In(targetLinkIdsToVerify), 
+        categoryId: toCategoryId 
+      }
+    });
+    
+    /// 验证目标链接是否存在
+  if (targetLinks.length !== targetLinkIdsToVerify.length) {
+    const missingIds = targetLinkIdsToVerify.filter(id => 
+      !targetLinks.some(l => l.id === id)
+    );
+    throw new NotFoundException(`以下链接不存在于目标分类: ${missingIds.join(',')}`);
+  }
+
+  // 使用事务处理跨分类操作
+  try {
+    await this.entityManager.transaction(async transactionalEntityManager => {
+      // 1. 移动链接到新分类
+      await transactionalEntityManager.update(
+        Link,
+        { id: linkId },
+        { 
+          categoryId: toCategoryId,
+          sort: toLinkIds.indexOf(linkId) + 1, // 计算新排序位置
+          updatedBy: payload.userId
+        }
+      );
+
+      // 2. 批量更新目标分类排序
+      const updatePromises = toLinkIds.map((id, index) => 
+        transactionalEntityManager.update(
+          Link,
+          { id },
+          { 
+            sort: index + 1,
+            updatedBy: payload.userId
+          }
+        )
+      );
+      
+      await Promise.all(updatePromises);
+    });
+
+    // 操作成功后备份
+    await this.backupService.automaticBackup(
+      'link-update', 
+      payload.userId
+    );
+    return this.apiResult.message(null, 0, '跨分类排序更新成功');
+  } catch (error) {
+    // 异常分类处理
+    if (error instanceof NotFoundException) {
+      throw error;
+    }
+    throw new InternalServerErrorException(
+      `操作失败: ${error.message}`,
+      { cause: error }
+    );
+  }
+}
 }

@@ -1,5 +1,5 @@
 import { Body, Controller, Post, Req, UseGuards } from "@nestjs/common";
-import { AddLinkDto, BatchAddLinksFromItabDto, DeleteLinkDto, GetLinkListDto, UpdateLinkDto, UpdateOrderOfLinksDto } from "./link.dto";
+import { AddLinkDto, BatchAddLinksFromItabDto, DeleteLinkDto, GetLinkListDto, UpdateLinkDto, UpdateOrderOfLinksCrossCategoryDto, UpdateOrderOfLinksDto } from "./link.dto";
 import { LinkService } from "./link.service";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { RequestContext } from "@src/core/decorators";
@@ -57,5 +57,11 @@ export class LinkController {
   @ApiOperation({ summary: '修改链接排序' })
   async updateOrderOfLinks(@Req() { user }: RequestContext, @Body() dto: UpdateOrderOfLinksDto) {
     return this.linkService.updateOrderOfLinks(user, dto)
+  }
+
+  @Post('update-order-of-links-cross-category')
+  @ApiOperation({ summary: '修改链接分类排序（可跨分类）' })
+  async updateOrderOfLinksCrossCategory(@Req() { user }: RequestContext, @Body() dto: UpdateOrderOfLinksCrossCategoryDto) {
+    return this.linkService.updateOrderOfLinksCrossCategory(user, dto)
   }
 }
