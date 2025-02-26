@@ -4,16 +4,20 @@ import { APP_GUARD } from "@nestjs/core";
 import { JwtModule } from "@nestjs/jwt";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { AuthGuard } from "../core/guards";
-import * as path from 'path';
+
+const env = process.env.NODE_ENV || 'dev';
+const envFilePath = [
+  `.env.${env}.local`,   // 1. 优先加载 .env.dev.local 
+  `.env.${env}`,         // 2. 次优加载 .env.dev
+  '.env.local',          // 3. 全局本地文件
+  '.env',                // 4. 全局默认文件
+];
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: path.resolve(
-        process.cwd(),
-        `.env.${process.env.NODE_ENV || 'dev'}`
-      )
+      envFilePath
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],

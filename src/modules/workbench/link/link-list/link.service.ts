@@ -12,6 +12,8 @@ import { User } from "@src/modules/system/user/user.entity";
 import * as dayjs from 'dayjs'
 import { formatLinkList } from "../tool";
 import { BackupService } from "../../backup/backup.service";
+import axios from "axios";
+import * as cheerio from 'cheerio';
 
 @Injectable()
 export class LinkService {
@@ -343,9 +345,7 @@ export class LinkService {
     }
 
     const user = await this.userRepository.findOneBy({ id: payload.userId, isDelete: 0 })
-    if (!user) {
-      throw new InternalServerErrorException('当前用户不存在')
-    }
+    if (!user) throw new InternalServerErrorException('当前用户不存在')
 
     // 验证原分类和目标分类权限
     const [fromCategory, toCategory] = await Promise.all([
@@ -376,57 +376,131 @@ export class LinkService {
     });
     
     /// 验证目标链接是否存在
-  if (targetLinks.length !== targetLinkIdsToVerify.length) {
-    const missingIds = targetLinkIdsToVerify.filter(id => 
-      !targetLinks.some(l => l.id === id)
-    );
-    throw new NotFoundException(`以下链接不存在于目标分类: ${missingIds.join(',')}`);
-  }
-
-  // 使用事务处理跨分类操作
-  try {
-    await this.entityManager.transaction(async transactionalEntityManager => {
-      // 1. 移动链接到新分类
-      await transactionalEntityManager.update(
-        Link,
-        { id: linkId },
-        { 
-          categoryId: toCategoryId,
-          sort: toLinkIds.indexOf(linkId) + 1, // 计算新排序位置
-          updatedBy: payload.userId
-        }
+    if (targetLinks.length !== targetLinkIdsToVerify.length) {
+      const missingIds = targetLinkIdsToVerify.filter(id => 
+        !targetLinks.some(l => l.id === id)
       );
+      throw new NotFoundException(`以下链接不存在于目标分类: ${missingIds.join(',')}`);
+    }
 
-      // 2. 批量更新目标分类排序
-      const updatePromises = toLinkIds.map((id, index) => 
-        transactionalEntityManager.update(
+    // 使用事务处理跨分类操作
+    try {
+      await this.entityManager.transaction(async transactionalEntityManager => {
+        // 1. 移动链接到新分类
+        await transactionalEntityManager.update(
           Link,
-          { id },
+          { id: linkId },
           { 
-            sort: index + 1,
+            categoryId: toCategoryId,
+            sort: toLinkIds.indexOf(linkId) + 1, // 计算新排序位置
             updatedBy: payload.userId
           }
-        )
-      );
-      
-      await Promise.all(updatePromises);
-    });
+        );
 
-    // 操作成功后备份
-    await this.backupService.automaticBackup(
-      'link-update', 
-      payload.userId
-    );
-    return this.apiResult.message(null, 0, '跨分类排序更新成功');
-  } catch (error) {
-    // 异常分类处理
-    if (error instanceof NotFoundException) {
-      throw error;
+        // 2. 批量更新目标分类排序
+        const updatePromises = toLinkIds.map((id, index) => 
+          transactionalEntityManager.update(
+            Link,
+            { id },
+            { 
+              sort: index + 1,
+              updatedBy: payload.userId
+            }
+          )
+        );
+        
+        await Promise.all(updatePromises);
+      });
+
+      // 操作成功后备份
+      await this.backupService.automaticBackup(
+        'link-update', 
+        payload.userId
+      );
+      return this.apiResult.message(null, 0, '跨分类排序更新成功');
+    } catch (error) {
+      // 异常分类处理
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        `操作失败: ${error.message}`,
+        { cause: error }
+      );
     }
-    throw new InternalServerErrorException(
-      `操作失败: ${error.message}`,
-      { cause: error }
-    );
   }
-}
+
+  /**通过域名获取ico或logo */
+  async getFaviconUrl(siteUrl: string) {
+    if (!siteUrl) {
+      return this.apiResult.message(null, -1, '链接不能为空')
+    }
+    try {
+      // 标准化URL并获取HTML
+      const normalizedUrl = this.normalizeUrl(siteUrl);
+      const { data: html, request } = await axios.get(normalizedUrl, {
+        timeout: 5000,
+        headers: { 'User-Agent': 'Mozilla/5.0' },
+      });
+      const baseUrl = request.res.responseUrl || normalizedUrl; // 处理重定向后的URL
+
+      // 解析HTML中的图标
+      const $ = cheerio.load(html);
+      const icons = [];
+      
+      $('link[rel*="icon"], link[rel*="shortcut"], link[rel*="apple-touch-icon"]').each((i, el) => {
+        const href = $(el).attr('href');
+        if (href) {
+          icons.push({
+            href: this.resolveUrl(baseUrl, href),
+            priority: this.getPriority($(el).attr('rel')),
+          });
+        }
+      });
+
+      // 按优先级排序并尝试下载
+      const sortedIcons = icons.sort((a, b) => b.priority - a.priority);
+      for (const icon of sortedIcons) {
+        if (await this.checkUrlExists(icon.href)) return icon.href;
+      }
+
+      // 尝试默认favicon.ico
+      const defaultIcon = this.resolveUrl(baseUrl, '/favicon.ico');
+      if (await this.checkUrlExists(defaultIcon)) {
+        return this.apiResult.message(defaultIcon, 0)
+      };
+
+      return this.apiResult.message(null, 0)
+    } catch (error) {
+      console.error('Error fetching favicon:', error);
+      return this.apiResult.message(null, 0)
+    }
+  }
+
+  /**初始化url，没有http/https时补全 */
+  private normalizeUrl(url: string): string {
+    if (!/^https?:\/\//i.test(url)) return `http://${url}`;
+    return url;
+  }
+
+  private resolveUrl(base: string, path: string): string {
+    return new URL(path, base).href;
+  }
+
+  private getPriority(rel: string): number {
+    if (rel.includes('apple-touch-icon')) return 2;
+    if (rel.includes('icon')) return 3;
+    if (rel.includes('shortcut')) return 1;
+    return 0;
+  }
+
+  private async checkUrlExists(url: string): Promise<boolean> {
+    try {
+      await axios.head(url, { timeout: 3000 });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
 }
