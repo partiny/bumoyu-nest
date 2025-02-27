@@ -204,6 +204,7 @@ export class LinkService {
             url: linkDto.url,
             name: linkDto.name,
             src: linkDto.src,
+            srcShow: linkDto.srcShow,
             type: linkDto.type,
             iconText: linkDto.iconText,
             backgroundColor: linkDto.backgroundColor,
@@ -272,6 +273,7 @@ export class LinkService {
             url: linkDto.url,
             name: linkDto.name,
             src: linkDto.src,
+            srcShow: linkDto.srcShow,
             type: linkDto.type,
             iconText: linkDto.iconText,
             backgroundColor: linkDto.backgroundColor,
@@ -437,10 +439,10 @@ export class LinkService {
     }
     try {
       // 标准化URL并获取HTML
-      const normalizedUrl = this.normalizeUrl(siteUrl);
+      const normalizedUrl = this.normalizeUrl(decodeURIComponent(siteUrl));
       const { data: html, request } = await axios.get(normalizedUrl, {
         timeout: 5000,
-        headers: { 'User-Agent': 'Mozilla/5.0' },
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' },
       });
       const baseUrl = request.res.responseUrl || normalizedUrl; // 处理重定向后的URL
 
@@ -460,20 +462,25 @@ export class LinkService {
 
       // 按优先级排序并尝试下载
       const sortedIcons = icons.sort((a, b) => b.priority - a.priority);
+      // 在遍历图标时添加 referer
       for (const icon of sortedIcons) {
-        if (await this.checkUrlExists(icon.href)) return icon.href;
+        const exists = await this.checkUrlExists(icon.href, baseUrl); // 传入 baseUrl 作为 referer
+        if (exists) return this.apiResult.message(icon.href, 0);
       }
 
       // 尝试默认favicon.ico
       const defaultIcon = this.resolveUrl(baseUrl, '/favicon.ico');
       if (await this.checkUrlExists(defaultIcon)) {
+        console.log('cc2222', defaultIcon)
         return this.apiResult.message(defaultIcon, 0)
       };
-
-      return this.apiResult.message(null, 0)
+      console.log('4444444', defaultIcon)
+      console.log('5555', baseUrl)
+      console.log('6666', icons)
+      return this.apiResult.message(null, -1, '未获取到图标')
     } catch (error) {
       console.error('Error fetching favicon:', error);
-      return this.apiResult.message(null, 0)
+      return this.apiResult.message(null, -1, '未获取到图标')
     }
   }
 
@@ -494,11 +501,21 @@ export class LinkService {
     return 0;
   }
 
-  private async checkUrlExists(url: string): Promise<boolean> {
+  private async checkUrlExists(url: string, referer?: string): Promise<boolean> {
     try {
-      await axios.head(url, { timeout: 3000 });
+      const headers: Record<string, string> = { 
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' 
+      };
+      if (referer) headers['Referer'] = referer;
+  
+      await axios.head(url, { 
+        timeout: 3000,
+        headers,
+        // 允许重定向（默认已开启）
+      });
       return true;
-    } catch {
+    } catch (error) {
+      console.log('校验失败：', error)
       return false;
     }
   }

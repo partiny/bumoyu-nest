@@ -13,6 +13,13 @@ export class Link extends Base {
   @Column({ type: 'varchar', length: 200, nullable: true, comment: 'icon背景图地址' })
   src: string;
 
+  @Column({
+    type: 'tinyint',
+    comment: '默认是否展示图标 1是-展示图标 0否-展示文字',
+    default: 0
+  })
+  srcShow: number;
+
   @Column({ type: 'varchar', length: 10, nullable: false, default: 'text', comment: '链接icon类型 text | icon | component' })
   type: 'text' | 'icon' | 'component';
 

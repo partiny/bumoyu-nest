@@ -30,6 +30,11 @@ export class LinkDto {
   @ApiProperty({ description: '链接背景图', example: 'https://example.com/bg.png', required: false })
   src?: string;
 
+  @IsNumber()
+  @IsOptional()
+  @ApiProperty({ description: '默认是否展示图标 1默认展示官方图标 0默认展示文字图标', example: 'https://example.com/bg.png', required: false })
+  srcShow?: number;
+
   @IsString({ message: '链接类型只能为字符串类型' })
   @IsIn(['text', 'icon', 'component'])
   @IsOptional()
