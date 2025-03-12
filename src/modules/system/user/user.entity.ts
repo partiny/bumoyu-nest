@@ -4,6 +4,7 @@ import * as dayjs from 'dayjs'
 import { Role } from "../role/role.entity";
 import { LinkCategory } from "@src/modules/workbench/link/link-category/link-category.entity";
 import { Backup } from "@src/modules/workbench/backup/backup.entity";
+import { Todo } from "@src/modules/workbench/todo/todo.entity";
 
 @Entity('user')
 export class User extends Base {
@@ -74,4 +75,8 @@ export class User extends Base {
 
   @OneToMany(() => Backup, backup => backup.user)
   backups: Backup
+
+  @OneToMany(() => Todo, todo => todo.user)
+  @JoinColumn()
+  todos: Todo[];
 }

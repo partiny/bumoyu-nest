@@ -7,6 +7,7 @@ import { LinkModule } from "./workbench/link/link-list/link.module";
 import { FileModule } from "./common/file/file.module";
 import { BackupModule } from "./workbench/backup/backup.module";
 import { MailModule } from "./common/mail/mail.module";
+import { TodoModule } from "./workbench/todo/todo.module";
 
 @Module({
   imports: [
@@ -17,7 +18,8 @@ import { MailModule } from "./common/mail/mail.module";
     LinkModule,
     FileModule,
     BackupModule,
-    MailModule
+    MailModule,
+    TodoModule
   ]
 })
 export class GatherModule {}
