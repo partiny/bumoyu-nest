@@ -62,7 +62,8 @@ export class TodoService {
   
     return this.apiResult.message(list.map(item => ({
       ...item,
-      dateTime: dayjs(item.dateTime).format('YYYY-MM-DD HH:mm')
+      startTime: item.startTime ? dayjs(item.startTime).format('YYYY-MM-DD HH:mm') : null,
+      endTime: item.endTime ? dayjs(item.endTime).format('YYYY-MM-DD HH:mm') : null
     })));
   }
   async getTodoList(user: PayloadUser, dto: TodoQueryDto) {

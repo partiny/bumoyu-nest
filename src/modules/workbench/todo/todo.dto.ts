@@ -21,7 +21,11 @@ export class CreateTodoDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  dateTime?: Date;
+  startTime?: Date;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  endTime?: Date;
 
   @ApiPropertyOptional({ enum: TodoPriority })
   @IsEnum(TodoPriority)

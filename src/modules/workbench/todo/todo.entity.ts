@@ -32,7 +32,10 @@ export class Todo extends Base {
   content: string;
 
   @Column({ type: 'timestamp', nullable: true })
-  dateTime: Date;
+  startTime: Date;
+
+  @Column({ type: 'timestamp', nullable: true })
+  endTime: Date;
 
   @Column({ type: 'enum', enum: TodoStatus, default: TodoStatus.PENDING })
   status: TodoStatus;
